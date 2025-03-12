@@ -1,0 +1,112 @@
+version: '3'
+
+tasks:
+  setup-cluster:
+    desc: "Utwórz klaster Kubernetes używając kind"
+    cmds:
+      - kind create cluster --name observability
+      - kubectl config use-context kind-observability
+      - echo "✅ Klaster Kubernetes utworzony"
+
+  delete-cluster:
+    desc: "Usuń klaster kind"
+    cmds:
+      - kind delete cluster --name observability
+      - echo "✅ Klaster Kubernetes usunięty"
+
+  create-namespace:
+    desc: "Utwórz przestrzeń nazw monitoring"
+    cmds:
+      - kubectl apply -f k8s/namespaces/monitoring.yaml
+      - echo "✅ Namespace 'monitoring' utworzony"
+
+  apply-prometheus:
+    desc: "Wdróż Prometheus"
+    cmds:
+      - kubectl apply -f k8s/prometheus/
+      - echo "✅ Prometheus wdrożony"
+
+  apply-grafana:
+    desc: "Wdróż Grafana"
+    cmds:
+      - kubectl apply -f k8s/grafana/
+      - echo "✅ Grafana wdrożona"
+
+  apply-loki:
+    desc: "Wdróż Loki"
+    cmds:
+      - kubectl apply -f k8s/loki/
+      - echo "✅ Loki wdrożony"
+
+  apply-promtail:
+    desc: "Wdróż Promtail"
+    cmds:
+      - kubectl apply -f k8s/promtail/
+      - echo "✅ Promtail wdrożony"
+
+  apply-jaeger:
+    desc: "Wdróż Jaeger"
+    cmds:
+      - kubectl apply -f k8s/jaeger/
+      - echo "✅ Jaeger wdrożony"
+
+  apply-monitoring:
+    desc: "Wdróż cały stos monitorujący"
+    cmds:
+      - task: create-namespace
+      - task: apply-prometheus
+      - task: apply-grafana
+      - task: apply-loki
+      - task: apply-promtail
+      - task: apply-jaeger
+      - echo "🚀 Wszystkie komponenty monitorujące wdrożone!"
+
+  port-forward:
+    desc: "Uruchom skrypt do przekierowania wszystkich portów"
+    cmds:
+      - bash scripts/port-forward.sh
+
+  status:
+    desc: "Sprawdź status komponentów monitorujących"
+    cmds:
+      - |
+        echo "Sprawdzanie podów w przestrzeni nazw monitoring..."
+        kubectl get pods -n monitoring
+        echo ""
+        echo "Sprawdzanie usług w przestrzeni nazw monitoring..."
+        kubectl get svc -n monitoring
+
+  deploy-all:
+    desc: "Wdróż wszystko - klaster, monitoring"
+    cmds:
+      - task: setup-cluster
+      - task: apply-monitoring
+      - task: status
+      - |
+        echo ""
+        echo "🎉 Observability Stack wdrożony pomyślnie!"
+        echo ""
+        echo "Aby uzyskać dostęp do interfejsów UI, uruchom:"
+        echo "  task port-forward"
+        echo ""
+        echo "Dostępne interfejsy webowe:"
+        echo "  - Prometheus: http://localhost:9090"
+        echo "  - Grafana:    http://localhost:3000 (admin/admin)"
+        echo "  - Jaeger UI:  http://localhost:16686"
+        echo "  - Loki API:   http://localhost:3100"
+
+  reset:
+    desc: "Reset całego środowiska"
+    cmds:
+      - task: delete-cluster
+      - task: deploy-all
+
+  urls:
+    desc: "Pokaż URL do wszystkich interfejsów"
+    cmds:
+      - |
+        echo "Dostępne interfejsy webowe:"
+        echo "  - Prometheus: http://localhost:9090"
+        echo "  - Grafana:    http://localhost:3000 (admin/admin)"
+        echo "  - Jaeger UI:  http://localhost:16686"
+        echo "  - Loki API:   http://localhost:3100"
